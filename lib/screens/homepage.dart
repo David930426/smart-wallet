@@ -10,7 +10,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   // Use a single Future for the combined list
-  late Future<List<Transaction>> _transactionList; 
+  Future<List<Transaction>> _transactionList = Future.value([]);
   double _balance = 0;
 
   @override
@@ -34,7 +34,7 @@ class _HomePageState extends State<HomePage> {
       }
     }
     // The list is already sorted by date DESC in getAllTransactions
-    
+
     setState(() {
       _transactionList = Future.value(transactions);
       _balance = currentBalance;
@@ -52,12 +52,16 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(16.0),
             child: Text(
               'Balance: \$${_balance.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _balance >= 0 ? Colors.green : Colors.red),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: _balance >= 0 ? Colors.green : Colors.red,
+              ),
             ),
           ),
           // Separator
           Divider(),
-          
+
           // Single FutureBuilder for ALL transactions
           Expanded(
             child: FutureBuilder<List<Transaction>>(
@@ -103,7 +107,9 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => AddTransaction()),
-          ).then((_) => _refreshData()); // Refresh when returning from AddTransaction
+          ).then(
+            (_) => _refreshData(),
+          ); // Refresh when returning from AddTransaction
         },
         child: Icon(Icons.add),
       ),
