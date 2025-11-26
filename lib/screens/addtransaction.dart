@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 // 1. UPDATE IMPORTS: Use the unified Transaction model
 import '../database/database.dart'; // Ensure you use the correct file name
-import '../models/transaction.dart'; 
+import '../models/transaction.dart';
 
 class AddTransaction extends StatefulWidget {
   @override
@@ -22,12 +22,12 @@ class _AddTransactionState extends State<AddTransaction> {
 
     final title = _titleController.text;
     // Safely parse the amount, defaulting to 0.0 if invalid
-    final amount = double.tryParse(_amountController.text) ?? 0.0; 
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
     // Determine the TransactionType enum based on the selected dropdown value
-    final transactionType = _type == 'Income' 
-        ? TransactionType.income 
+    final transactionType = _type == 'Income'
+        ? TransactionType.income
         : TransactionType.expense;
 
     // 2. CREATE UNIFIED TRANSACTION OBJECT
@@ -40,14 +40,24 @@ class _AddTransactionState extends State<AddTransaction> {
 
     // 3. CALL SINGLE DATABASE INSERT METHOD
     // Assuming your DatabaseHelper now has an insertTransaction(Transaction t) method
-    await DatabaseHelper().insertTransaction(newTransaction);
-    
-    // Check if insertion was successful (optional, but good practice)
-    // if (id > 0) {
-    //   print("Transaction inserted with ID: $id");
-    // }
+    try {
+      // Attempt the database insert
+      await DatabaseHelper().insertTransaction(newTransaction);
 
-    Navigator.pop(context); // Go back to HomePage
+      if (!mounted) return;
+      // If successful, navigate back
+      Navigator.pop(context);
+    } catch (e) {
+      // *** PRINT THE REAL ERROR HERE ***
+      print('DATABASE INSERTION ERROR: $e');
+
+      if (!mounted) return;
+
+      // Check console output for the message starting with "DATABASE INSERTION ERROR"
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save transaction: $e')));
+    }
   }
 
   Future<void> _pickDate() async {
@@ -77,7 +87,9 @@ class _AddTransactionState extends State<AddTransaction> {
               // Type selector (Dropdown)
               DropdownButtonFormField<String>(
                 value: _type,
-                items: ['Income', 'Expense'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                items: ['Income', 'Expense']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _type = val);
                 },
@@ -89,7 +101,8 @@ class _AddTransactionState extends State<AddTransaction> {
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(labelText: 'Title'),
-                validator: (val) => val == null || val.isEmpty ? 'Enter title' : null,
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Enter title' : null,
               ),
               SizedBox(height: 16),
 
@@ -98,10 +111,11 @@ class _AddTransactionState extends State<AddTransaction> {
                 controller: _amountController,
                 decoration: InputDecoration(labelText: 'Amount'),
                 // Only allow numbers and decimal point
-                keyboardType: TextInputType.numberWithOptions(decimal: true), 
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (val) {
                   if (val == null || val.isEmpty) return 'Enter amount';
-                  if (double.tryParse(val) == null) return 'Enter a valid number';
+                  if (double.tryParse(val) == null)
+                    return 'Enter a valid number';
                   return null;
                 },
               ),
@@ -110,8 +124,10 @@ class _AddTransactionState extends State<AddTransaction> {
               // Date picker
               Row(
                 children: [
-                  Text('Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}'),
-                  TextButton(onPressed: _pickDate, child: Text('Select Date'))
+                  Text(
+                    'Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+                  ),
+                  TextButton(onPressed: _pickDate, child: Text('Select Date')),
                 ],
               ),
               SizedBox(height: 32),

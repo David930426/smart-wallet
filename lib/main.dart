@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
+// 👇 Add this import to define defaultTargetPlatform
+import 'package:flutter/foundation.dart'; 
+
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'screens/homepage.dart';
 
 void main() {
+  // Ensure the widget binding is initialized before checking the platform
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  if (defaultTargetPlatform == TargetPlatform.windows || 
+      defaultTargetPlatform == TargetPlatform.linux || 
+      defaultTargetPlatform == TargetPlatform.macOS) {
+    
+    // Initialize FFI for desktop platforms
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+  
   runApp(const MyApp());
 }
 
