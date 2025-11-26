@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/addtransaction.dart';
 import '../database/database.dart';
-import '../models/income.dart';
-import '../models/expense.dart';
+import '../models/transaction.dart'; // Use the unified model
 
 class HomePage extends StatefulWidget {
   @override
@@ -10,8 +9,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<List<Income>> _incomeList;
-  late Future<List<Expense>> _expenseList;
+  // Use a single Future for the combined list
+  late Future<List<Transaction>> _transactionList; 
   double _balance = 0;
 
   @override
@@ -20,18 +19,25 @@ class _HomePageState extends State<HomePage> {
     _refreshData();
   }
 
-  // Refresh both income, expense, and balance
+  // Refresh data by fetching ALL transactions
   void _refreshData() async {
-    final incomes = await DatabaseHelper().getAllIncome();
-    final expenses = await DatabaseHelper().getAllExpense();
+    // 1. Fetch all transactions from the single table
+    final transactions = await DatabaseHelper().getAllTransactions();
+    double currentBalance = 0.0;
 
-    double totalIncome = incomes.fold(0, (sum, item) => sum + item.amount);
-    double totalExpense = expenses.fold(0, (sum, item) => sum + item.amount);
-
+    // 2. Calculate balance locally from the combined list
+    for (var t in transactions) {
+      if (t.type == TransactionType.income) {
+        currentBalance += t.amount;
+      } else {
+        currentBalance -= t.amount;
+      }
+    }
+    // The list is already sorted by date DESC in getAllTransactions
+    
     setState(() {
-      _incomeList = Future.value(incomes);
-      _expenseList = Future.value(expenses);
-      _balance = totalIncome - totalExpense;
+      _transactionList = Future.value(transactions);
+      _balance = currentBalance;
     });
   }
 
@@ -41,54 +47,49 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(title: Text('Smart Wallet')),
       body: Column(
         children: [
+          // Display the Balance
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
               'Balance: \$${_balance.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _balance >= 0 ? Colors.green : Colors.red),
             ),
           ),
+          // Separator
+          Divider(),
+          
+          // Single FutureBuilder for ALL transactions
           Expanded(
-            child: FutureBuilder<List<Income>>(
-              future: _incomeList,
-              builder: (context, incomeSnapshot) {
-                if (!incomeSnapshot.hasData) return Center(child: CircularProgressIndicator());
-                final incomes = incomeSnapshot.data!;
-                return FutureBuilder<List<Expense>>(
-                  future: _expenseList,
-                  builder: (context, expenseSnapshot) {
-                    if (!expenseSnapshot.hasData) return Center(child: CircularProgressIndicator());
-                    final expenses = expenseSnapshot.data!;
+            child: FutureBuilder<List<Transaction>>(
+              future: _transactionList,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No transactions yet'));
+                }
 
-                    if (incomes.isEmpty && expenses.isEmpty) {
-                      return Center(child: Text('No transactions yet'));
-                    }
+                final transactions = snapshot.data!;
 
-                    return ListView(
-                      children: [
-                        if (incomes.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                            child: Text("Incomes", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          ),
-                          ...incomes.map((income) => ListTile(
-                                title: Text(income.title),
-                                subtitle: Text(income.date),
-                                trailing: Text('\$${income.amount.toStringAsFixed(2)}'),
-                              )),
-                        ],
-                        if (expenses.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                            child: Text("Expenses", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          ),
-                          ...expenses.map((expense) => ListTile(
-                                title: Text(expense.title),
-                                subtitle: Text(expense.date),
-                                trailing: Text('\$${expense.amount.toStringAsFixed(2)}'),
-                              )),
-                        ],
-                      ],
+                return ListView.builder(
+                  itemCount: transactions.length,
+                  itemBuilder: (context, index) {
+                    final transaction = transactions[index];
+                    final isIncome = transaction.type == TransactionType.income;
+                    final color = isIncome ? Colors.green : Colors.red;
+                    final sign = isIncome ? '+' : '-';
+
+                    return ListTile(
+                      title: Text(transaction.title),
+                      subtitle: Text(transaction.date),
+                      trailing: Text(
+                        '$sign\$${transaction.amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     );
                   },
                 );
@@ -102,7 +103,7 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => AddTransaction()),
-          ).then((_) => _refreshData());
+          ).then((_) => _refreshData()); // Refresh when returning from AddTransaction
         },
         child: Icon(Icons.add),
       ),

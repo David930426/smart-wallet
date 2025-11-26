@@ -1,98 +1,76 @@
-// Path: lib/database/database.dart
-
-import 'package:sqflite/sqflite.dart';
+// Imports: Note the 'as sql' prefix to avoid conflict with the Transaction model
+import 'package:sqflite/sqflite.dart' as sql; 
 import 'package:path/path.dart';
-import 'package:flutter/widgets.dart'; // Import ini diperlukan untuk WidgetsFlutterBinding.ensureInitialized()
-
-// Asumsi model Income terletak di sini, seperti yang diimpor di widget Anda.
-// Anda mungkin perlu menyesuaikan path ini jika letaknya berbeda.
-import '../models/income.dart'; 
+import '../models/transaction.dart';
 
 class DatabaseHelper {
-  // 1. Singleton (Pola Desain)
-  // Memastikan hanya ada satu instance dari DatabaseHelper yang digunakan di seluruh aplikasi.
   static final DatabaseHelper _instance = DatabaseHelper._internal();
-  factory DatabaseHelper() => _instance;
+  static sql.Database? _database;
+
+  factory DatabaseHelper() {
+    return _instance;
+  }
+
   DatabaseHelper._internal();
 
-  // 2. Referensi Database
-  static Database? _database;
-
-  // 3. Getter untuk inisialisasi database jika belum ada
-  Future<Database> get database async {
-    // Memastikan binding Flutter sudah diinisialisasi
-    WidgetsFlutterBinding.ensureInitialized();
+  Future<sql.Database> get database async {
     if (_database != null) return _database!;
-    
-    // Jika _database null, panggil _initDatabase
     _database = await _initDatabase();
     return _database!;
   }
 
-  // 4. Inisialisasi dan buka database
-  Future<Database> _initDatabase() async {
-    final databasePath = await getDatabasesPath();
-    final path = join(databasePath, 'smart_wallet.db');
-
-    // Buka database atau buat jika belum ada
-    return await openDatabase(
+  Future<sql.Database> _initDatabase() async {
+    final dbPath = await sql.getDatabasesPath();
+    final path = join(dbPath, 'wallet.db');
+    return await sql.openDatabase(
       path,
       version: 1,
       onCreate: _onCreate,
     );
   }
 
-  // 5. Membuat tabel database (dipanggil hanya sekali saat pertama kali dibuka)
-  Future<void> _onCreate(Database db, int version) async {
+  void _onCreate(sql.Database db, int version) async {
+    // Creating ONE unified table called 'transactions'
     await db.execute('''
-      CREATE TABLE incomes(
+      CREATE TABLE transactions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         amount REAL,
-        date TEXT
+        date TEXT,
+        type INTEGER  /* 1=income, 0=expense */
       )
     ''');
-    debugPrint('Database table "incomes" created.');
   }
 
-  // --- Metode yang Digunakan oleh Widget Anda ---
-
-  // Metode untuk Menyimpan Pemasukan Baru (Digunakan oleh AddTransaction)
-  Future<int> insertIncome(Income income) async {
+  // Insert a new transaction (income or expense)
+  Future<int> insertTransaction(Transaction transaction) async {
     final db = await database;
-    try {
-      final id = await db.insert(
-        'incomes',
-        income.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      debugPrint('Income inserted with ID: $id');
-      return id;
-    } catch (e) {
-      debugPrint('Error inserting income: $e');
-      rethrow;
-    }
+    return await db.insert('transactions', transaction.toMap());
   }
 
-  // Metode untuk Mengambil Semua Pemasukan (Digunakan oleh HomePage)
-  Future<List<Income>> getAllIncome() async {
+  // Retrieve all transactions
+  Future<List<Transaction>> getAllTransactions() async {
     final db = await database;
+    // Query the single table, ordered by date
+    final List<Map<String, dynamic>> maps = await db.query('transactions', orderBy: 'date DESC'); 
     
-    // Query untuk mendapatkan semua baris dari tabel 'incomes', diurutkan berdasarkan tanggal
-    final List<Map<String, dynamic>> maps = await db.query('incomes', orderBy: 'id DESC');
-
-    // Konversi List<Map<String, dynamic>> menjadi List<Income>.
     return List.generate(maps.length, (i) {
-      return Income.fromMap(maps[i]);
+      return Transaction.fromMap(maps[i]);
     });
   }
+  
+  // Method to calculate the total balance
+  Future<double> getBalance() async {
+    final transactions = await getAllTransactions();
+    double totalBalance = 0.0;
 
-  // --- Metode Tambahan (Opsional) ---
-
-  // Contoh metode untuk menutup database
-  Future<void> closeDb() async {
-    final db = await database;
-    db.close();
-    _database = null;
+    for (var t in transactions) {
+      if (t.type == TransactionType.income) {
+        totalBalance += t.amount;
+      } else { // expense
+        totalBalance -= t.amount;
+      }
+    }
+    return totalBalance;
   }
 }

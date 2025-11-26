@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../database/database.dart';
-import '../models/income.dart';
-import '../models/expense.dart';
 import 'package:intl/intl.dart';
+
+// 1. UPDATE IMPORTS: Use the unified Transaction model
+import '../database/database.dart'; // Ensure you use the correct file name
+import '../models/transaction.dart'; 
 
 class AddTransaction extends StatefulWidget {
   @override
@@ -13,23 +14,40 @@ class _AddTransactionState extends State<AddTransaction> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
-  String _type = 'Income'; // default type
+  String _type = 'Income'; // default type for the Dropdown
   DateTime _selectedDate = DateTime.now();
 
   Future<void> _saveTransaction() async {
     if (!_formKey.currentState!.validate()) return;
 
     final title = _titleController.text;
-    final amount = double.tryParse(_amountController.text) ?? 0;
+    // Safely parse the amount, defaulting to 0.0 if invalid
+    final amount = double.tryParse(_amountController.text) ?? 0.0; 
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-    if (_type == 'Income') {
-      await DatabaseHelper().insertIncome(Income(title: title, amount: amount, date: dateStr));
-    } else {
-      await DatabaseHelper().insertExpense(Expense(title: title, amount: amount, date: dateStr));
-    }
+    // Determine the TransactionType enum based on the selected dropdown value
+    final transactionType = _type == 'Income' 
+        ? TransactionType.income 
+        : TransactionType.expense;
 
-    Navigator.pop(context); // kembali ke HomePage
+    // 2. CREATE UNIFIED TRANSACTION OBJECT
+    final newTransaction = Transaction(
+      title: title,
+      amount: amount,
+      date: dateStr,
+      type: transactionType,
+    );
+
+    // 3. CALL SINGLE DATABASE INSERT METHOD
+    // Assuming your DatabaseHelper now has an insertTransaction(Transaction t) method
+    await DatabaseHelper().insertTransaction(newTransaction);
+    
+    // Check if insertion was successful (optional, but good practice)
+    // if (id > 0) {
+    //   print("Transaction inserted with ID: $id");
+    // }
+
+    Navigator.pop(context); // Go back to HomePage
   }
 
   Future<void> _pickDate() async {
@@ -56,7 +74,7 @@ class _AddTransactionState extends State<AddTransaction> {
           key: _formKey,
           child: Column(
             children: [
-              // Type selector
+              // Type selector (Dropdown)
               DropdownButtonFormField<String>(
                 value: _type,
                 items: ['Income', 'Expense'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
@@ -79,8 +97,13 @@ class _AddTransactionState extends State<AddTransaction> {
               TextFormField(
                 controller: _amountController,
                 decoration: InputDecoration(labelText: 'Amount'),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (val) => val == null || val.isEmpty ? 'Enter amount' : null,
+                // Only allow numbers and decimal point
+                keyboardType: TextInputType.numberWithOptions(decimal: true), 
+                validator: (val) {
+                  if (val == null || val.isEmpty) return 'Enter amount';
+                  if (double.tryParse(val) == null) return 'Enter a valid number';
+                  return null;
+                },
               ),
               SizedBox(height: 16),
 
