@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
+=======
+import '../helpers/db_helper.dart';
+import '../models/income.dart';
+import '../models/expense.dart';
+>>>>>>> origin/jovi
 import 'package:intl/intl.dart';
 
 // 1. UPDATE IMPORTS: Use the unified Transaction model
@@ -25,6 +31,7 @@ class _AddTransactionState extends State<AddTransaction> {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
+<<<<<<< HEAD
     // Determine the TransactionType enum based on the selected dropdown value
     final transactionType = _type == 'Income'
         ? TransactionType.income
@@ -57,6 +64,31 @@ class _AddTransactionState extends State<AddTransaction> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to save transaction: $e')));
+=======
+    try {
+      if (_type == 'Income') {
+        await DBHelper().insertIncome(Income(title: title, amount: amount, date: dateStr));
+      } else {
+        await DBHelper().insertExpense(Expense(title: title, amount: amount, date: dateStr));
+      }
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Transaction saved successfully!')),
+        );
+      }
+
+      // Pop with true to indicate success
+      Navigator.pop(context, true);
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving transaction: $e')),
+        );
+      }
+>>>>>>> origin/jovi
     }
   }
 
@@ -72,6 +104,13 @@ class _AddTransactionState extends State<AddTransaction> {
         _selectedDate = picked;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _amountController.dispose();
+    super.dispose();
   }
 
   @override
