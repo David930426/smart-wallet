@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../screens/addtransaction.dart';
-import '../database/database.dart';
-import '../models/transaction.dart'; // Use the unified model
+import 'package:intl/intl.dart';
+import 'transaction_store.dart';
+import 'transaction.dart';
+import 'addtransaction.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -9,109 +10,65 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Use a single Future for the combined list
-  Future<List<Transaction>> _transactionList = Future.value([]);
-  double _balance = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshData();
-  }
-
-  // Refresh data by fetching ALL transactions
-  void _refreshData() async {
-    // 1. Fetch all transactions from the single table
-    final transactions = await DatabaseHelper().getAllTransactions();
-    double currentBalance = 0.0;
-
-    // 2. Calculate balance locally from the combined list
-    for (var t in transactions) {
-      if (t.type == TransactionType.income) {
-        currentBalance += t.amount;
-      } else {
-        currentBalance -= t.amount;
-      }
-    }
-    // The list is already sorted by date DESC in getAllTransactions
-
-    setState(() {
-      _transactionList = Future.value(transactions);
-      _balance = currentBalance;
-    });
-  }
+  void _refresh() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
+    final transactions = TransactionStore().getAll();
+    final balance = TransactionStore().getBalance();
+
     return Scaffold(
       appBar: AppBar(title: Text('Smart Wallet')),
       body: Column(
         children: [
-          // Display the Balance
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              'Balance: \$${_balance.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: _balance >= 0 ? Colors.green : Colors.red,
-              ),
+              'Balance: \$${balance.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
-          // Separator
-          Divider(),
-
-          // Single FutureBuilder for ALL transactions
           Expanded(
-            child: FutureBuilder<List<Transaction>>(
-              future: _transactionList,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text('No transactions yet'));
-                }
-
-                final transactions = snapshot.data!;
-
-                return ListView.builder(
-                  itemCount: transactions.length,
-                  itemBuilder: (context, index) {
-                    final transaction = transactions[index];
-                    final isIncome = transaction.type == TransactionType.income;
-                    final color = isIncome ? Colors.green : Colors.red;
-                    final sign = isIncome ? '+' : '-';
-
-                    return ListTile(
-                      title: Text(transaction.title),
-                      subtitle: Text(transaction.date),
-                      trailing: Text(
-                        '$sign\$${transaction.amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.bold,
+            child: transactions.isEmpty
+                ? Center(child: Text('No transactions yet'))
+                : ListView.builder(
+                    itemCount: transactions.length,
+                    itemBuilder: (_, index) {
+                      final t = transactions[index];
+                      return ListTile(
+                        leading: Icon(
+                          t.type == TransactionType.income
+                              ? Icons.arrow_downward
+                              : Icons.arrow_upward,
+                          color: t.type == TransactionType.income
+                              ? Colors.green
+                              : Colors.red,
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                        title: Text(t.title),
+                        subtitle: Text(t.date),
+                        trailing: Text(
+                          (t.type == TransactionType.income ? '+' : '-') +
+                              '\$${t.amount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              color: t.type == TransactionType.income
+                                  ? Colors.green
+                                  : Colors.red),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        child: Icon(Icons.add),
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => AddTransaction()),
-          ).then(
-            (_) => _refreshData(),
-          ); // Refresh when returning from AddTransaction
+          );
+          _refresh(); // refresh after returning
         },
-        child: Icon(Icons.add),
       ),
     );
   }
