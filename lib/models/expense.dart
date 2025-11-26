@@ -14,4 +14,15 @@ class Expense {
       'date': date,
     };
   }
+
+  factory Expense.fromMap(Map<String, dynamic> map) {
+    return Expense(
+      id: map['id'],
+      title: map['title'],
+      amount: map['amount'],
+      date: map['date'],
+    );
+  }
+
+  // static Expense fromMap(Map<String, dynamic> map) {}
 }

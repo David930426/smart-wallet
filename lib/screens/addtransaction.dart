@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../database/database.dart';
+import '../helpers/db_helper.dart';
 import '../models/income.dart';
 import '../models/expense.dart';
 import 'package:intl/intl.dart';
@@ -23,13 +23,30 @@ class _AddTransactionState extends State<AddTransaction> {
     final amount = double.tryParse(_amountController.text) ?? 0;
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-    if (_type == 'Income') {
-      await DatabaseHelper().insertIncome(Income(title: title, amount: amount, date: dateStr));
-    } else {
-      await DatabaseHelper().insertExpense(Expense(title: title, amount: amount, date: dateStr));
-    }
+    try {
+      if (_type == 'Income') {
+        await DBHelper().insertIncome(Income(title: title, amount: amount, date: dateStr));
+      } else {
+        await DBHelper().insertExpense(Expense(title: title, amount: amount, date: dateStr));
+      }
 
-    Navigator.pop(context); // kembali ke HomePage
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Transaction saved successfully!')),
+        );
+      }
+
+      // Pop with true to indicate success
+      Navigator.pop(context, true);
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving transaction: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _pickDate() async {
@@ -44,6 +61,13 @@ class _AddTransactionState extends State<AddTransaction> {
         _selectedDate = picked;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _amountController.dispose();
+    super.dispose();
   }
 
   @override

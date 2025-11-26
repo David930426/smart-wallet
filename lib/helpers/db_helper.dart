@@ -18,6 +18,7 @@ class DBHelper {
 
   Future<Database> _initDB() async {
     String path = join(await getDatabasesPath(), 'smart_wallet.db');
+
     return await openDatabase(
       path,
       version: 1,
@@ -48,11 +49,28 @@ class DBHelper {
     await db.insert('incomes', income.toMap());
   }
 
+  // Future<void> insertIncome(Income income) async {
+  //   final db = await database;
+  //   await db.insert('incomes', income.toMap());
+  //   print('DEBUG DBHelper: Inserted income - ${income.toString()}');
+  // }
+
   Future<List<Income>> getAllIncomes() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('incomes');
     return List.generate(maps.length, (i) => Income.fromMap(maps[i]));
   }
+
+  // Future<List<Income>> getAllIncomes() async {
+  //   final db = await database;
+  //   final List<Map<String, dynamic>> maps = await db.query('incomes');
+  //   print('DEBUG DBHelper: Retrieved ${maps.length} incomes from database');
+  //   return List.generate(maps.length, (i) {
+  //     final income = Income.fromMap(maps[i]);
+  //     print('DEBUG DBHelper: Income ${i + 1} - ${income.toString()}');
+  //     return income;
+  //   });
+  // }
 
   // Expense CRUD
   Future<void> insertExpense(Expense expense) async {
@@ -60,11 +78,28 @@ class DBHelper {
     await db.insert('expenses', expense.toMap());
   }
 
+  // Future<void> insertExpense(Expense expense) async {
+  //   final db = await database;
+  //   await db.insert('expenses', expense.toMap());
+  //   print('DEBUG DBHelper: Inserted expense - ${expense.toString()}');
+  // }
+
   Future<List<Expense>> getAllExpenses() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('expenses');
     return List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
   }
+
+  // Future<List<Expense>> getAllExpenses() async {
+  //   final db = await database;
+  //   final List<Map<String, dynamic>> maps = await db.query('expenses');
+  //   print('DEBUG DBHelper: Retrieved ${maps.length} expenses from database');
+  //   return List.generate(maps.length, (i) {
+  //     final expense = Expense.fromMap(maps[i]);
+  //     print('DEBUG DBHelper: Expense ${i + 1} - ${expense.toString()}');
+  //     return expense;
+  //   });
+  // }
 
   // Saldo
   Future<double> getBalance() async {

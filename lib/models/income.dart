@@ -25,7 +25,7 @@ class Income {
   }
 
   // Extract an Income object from a Map (THIS WAS MISSING)
-  static Income fromMap(Map<String, dynamic> map) {
+  factory Income.fromMap(Map<String, dynamic> map) {
     return Income(
       // SQLite stores INTEGER primary keys as int, but nullable int? is safe
       id: map['id'] as int?, 

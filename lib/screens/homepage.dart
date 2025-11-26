@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/addtransaction.dart';
-import '../database/database.dart';
+import '../helpers/db_helper.dart';
 import '../models/income.dart';
 import '../models/expense.dart';
 
@@ -17,22 +17,39 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _refreshData();
+    _loadData();
   }
 
-  // Refresh both income, expense, and balance
-  void _refreshData() async {
-    final incomes = await DatabaseHelper().getAllIncome();
-    final expenses = await DatabaseHelper().getAllExpense();
+  // Initial load - NO setState here
+  void _loadData() {
+    _incomeList = DBHelper().getAllIncomes();
+    _expenseList = DBHelper().getAllExpenses();
+    _calculateBalance();
+  }
+
+  // Calculate balance
+  Future<void> _calculateBalance() async {
+    final incomes = await DBHelper().getAllIncomes();
+    final expenses = await DBHelper().getAllExpenses();
+
 
     double totalIncome = incomes.fold(0, (sum, item) => sum + item.amount);
     double totalExpense = expenses.fold(0, (sum, item) => sum + item.amount);
 
+    if (mounted) {
+      setState(() {
+        _balance = totalIncome - totalExpense;
+      });
+    }
+  }
+
+  // Refresh data - use setState to trigger rebuild
+  void _refreshData() {
     setState(() {
-      _incomeList = Future.value(incomes);
-      _expenseList = Future.value(expenses);
-      _balance = totalIncome - totalExpense;
+      _incomeList = DBHelper().getAllIncomes();
+      _expenseList = DBHelper().getAllExpenses();
     });
+    _calculateBalance();
   }
 
   @override
@@ -52,12 +69,25 @@ class _HomePageState extends State<HomePage> {
             child: FutureBuilder<List<Income>>(
               future: _incomeList,
               builder: (context, incomeSnapshot) {
-                if (!incomeSnapshot.hasData) return Center(child: CircularProgressIndicator());
+                if (incomeSnapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (!incomeSnapshot.hasData) {
+                  return Center(child: Text('No data available'));
+                }
+                
                 final incomes = incomeSnapshot.data!;
+                
                 return FutureBuilder<List<Expense>>(
                   future: _expenseList,
                   builder: (context, expenseSnapshot) {
-                    if (!expenseSnapshot.hasData) return Center(child: CircularProgressIndicator());
+                    if (expenseSnapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+                    if (!expenseSnapshot.hasData) {
+                      return Center(child: Text('No data available'));
+                    }
+                    
                     final expenses = expenseSnapshot.data!;
 
                     if (incomes.isEmpty && expenses.isEmpty) {
@@ -98,11 +128,16 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => AddTransaction()),
-          ).then((_) => _refreshData());
+          );
+          
+          // Only refresh if transaction was saved successfully
+          if (result == true) {
+            _refreshData();
+          }
         },
         child: Icon(Icons.add),
       ),
