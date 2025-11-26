@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-=======
 import '../helpers/db_helper.dart';
 import '../models/income.dart';
 import '../models/expense.dart';
->>>>>>> origin/jovi
 import 'package:intl/intl.dart';
 
 // 1. UPDATE IMPORTS: Use the unified Transaction model
@@ -31,40 +28,6 @@ class _AddTransactionState extends State<AddTransaction> {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-<<<<<<< HEAD
-    // Determine the TransactionType enum based on the selected dropdown value
-    final transactionType = _type == 'Income'
-        ? TransactionType.income
-        : TransactionType.expense;
-
-    // 2. CREATE UNIFIED TRANSACTION OBJECT
-    final newTransaction = Transaction(
-      title: title,
-      amount: amount,
-      date: dateStr,
-      type: transactionType,
-    );
-
-    // 3. CALL SINGLE DATABASE INSERT METHOD
-    // Assuming your DatabaseHelper now has an insertTransaction(Transaction t) method
-    try {
-      // Attempt the database insert
-      await DatabaseHelper().insertTransaction(newTransaction);
-
-      if (!mounted) return;
-      // If successful, navigate back
-      Navigator.pop(context);
-    } catch (e) {
-      // *** PRINT THE REAL ERROR HERE ***
-      print('DATABASE INSERTION ERROR: $e');
-
-      if (!mounted) return;
-
-      // Check console output for the message starting with "DATABASE INSERTION ERROR"
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save transaction: $e')));
-=======
     try {
       if (_type == 'Income') {
         await DBHelper().insertIncome(Income(title: title, amount: amount, date: dateStr));
@@ -88,7 +51,6 @@ class _AddTransactionState extends State<AddTransaction> {
           SnackBar(content: Text('Error saving transaction: $e')),
         );
       }
->>>>>>> origin/jovi
     }
   }
 

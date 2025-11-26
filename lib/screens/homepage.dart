@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import '../screens/addtransaction.dart';
-<<<<<<< HEAD
-import '../database/database.dart';
-import '../models/transaction.dart'; // Use the unified model
-=======
 import '../helpers/db_helper.dart';
 import '../models/income.dart';
 import '../models/expense.dart';
->>>>>>> origin/jovi
 
 class HomePage extends StatefulWidget {
   @override
@@ -25,13 +20,6 @@ class _HomePageState extends State<HomePage> {
     _loadData();
   }
 
-<<<<<<< HEAD
-  // Refresh data by fetching ALL transactions
-  void _refreshData() async {
-    // 1. Fetch all transactions from the single table
-    final transactions = await DatabaseHelper().getAllTransactions();
-    double currentBalance = 0.0;
-=======
   // Initial load - NO setState here
   void _loadData() {
     _incomeList = DBHelper().getAllIncomes();
@@ -44,7 +32,6 @@ class _HomePageState extends State<HomePage> {
     final incomes = await DBHelper().getAllIncomes();
     final expenses = await DBHelper().getAllExpenses();
 
->>>>>>> origin/jovi
 
     // 2. Calculate balance locally from the combined list
     for (var t in transactions) {
