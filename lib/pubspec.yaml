@@ -1,8 +1,0 @@
-dependencies:
-  flutter:
-    sdk: flutter
-  sqflite: ^2.3.0        # Ensure you have sqflite
-  path: ^1.8.3
-  intl: ^0.19.0
-  # 👇 ADD THIS LINE for desktop/testing support
-  sqflite_common_ffi: ^2.3.0

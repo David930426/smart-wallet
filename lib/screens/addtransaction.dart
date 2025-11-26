@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import '../helpers/db_helper.dart';
-import '../models/income.dart';
-import '../models/expense.dart';
+// REMOVE: import '../helpers/db_helper.dart'; // Old helper
+// REMOVE: import '../models/income.dart';   // Old model
+// REMOVE: import '../models/expense.dart';  // Old model
+import '../database/database.dart'; // The new unified helper
+import '../models/transaction.dart'; // The new unified model
 import 'package:intl/intl.dart';
-
-// 1. UPDATE IMPORTS: Use the unified Transaction model
-import '../database/database.dart'; // Ensure you use the correct file name
-import '../models/transaction.dart';
 
 class AddTransaction extends StatefulWidget {
   @override
@@ -21,38 +19,50 @@ class _AddTransactionState extends State<AddTransaction> {
   DateTime _selectedDate = DateTime.now();
 
   Future<void> _saveTransaction() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    final title = _titleController.text;
-    // Safely parse the amount, defaulting to 0.0 if invalid
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
-    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+  final title = _titleController.text;
+  final amount = double.tryParse(_amountController.text) ?? 0.0;
+  final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-    try {
-      if (_type == 'Income') {
-        await DBHelper().insertIncome(Income(title: title, amount: amount, date: dateStr));
-      } else {
-        await DBHelper().insertExpense(Expense(title: title, amount: amount, date: dateStr));
-      }
+  // 1. Determine the unified TransactionType
+  final transactionType = _type == 'Income' 
+      ? TransactionType.income 
+      : TransactionType.expense;
 
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Transaction saved successfully!')),
-        );
-      }
+  // 2. Create the unified Transaction object
+  final newTransaction = Transaction(
+    title: title,
+    amount: amount,
+    date: dateStr,
+    type: transactionType,
+  );
 
-      // Pop with true to indicate success
-      Navigator.pop(context, true);
-    } catch (e) {
-      // Show error message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving transaction: $e')),
-        );
-      }
+  try {
+    // 3. Call the single insert method on the correct helper class
+    // Assuming your unified database class is named DatabaseHelper
+    await DatabaseHelper().insertTransaction(newTransaction);
+
+    // Show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Transaction saved successfully!')),
+      );
+    }
+
+    // Pop with true to indicate success
+    Navigator.pop(context, true);
+  } catch (e) {
+    // Log and show error message
+    print('DATABASE INSERTION ERROR: $e'); 
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving transaction: $e')),
+      );
     }
   }
+}
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(

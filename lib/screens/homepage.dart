@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../screens/addtransaction.dart';
-import '../helpers/db_helper.dart';
-import '../models/income.dart';
-import '../models/expense.dart';
+
+// Assuming your unified database helper is in '../database/database.dart'
+// If your helper is named DBHelper, it must be the unified one.
+import '../database/database.dart'; 
+import '../models/transaction.dart'; // Must use the unified Transaction model
 
 class HomePage extends StatefulWidget {
   @override
@@ -10,58 +12,40 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Use a single Future for the combined list
-  Future<List<Transaction>> _transactionList = Future.value([]);
+  // 1. Single source of truth for the list, initialized to prevent crashes
+  Future<List<Transaction>> _transactionList = Future.value([]); 
   double _balance = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _refreshData(); // Start loading data immediately
   }
 
-  // Initial load - NO setState here
-  void _loadData() {
-    _incomeList = DBHelper().getAllIncomes();
-    _expenseList = DBHelper().getAllExpenses();
-    _calculateBalance();
-  }
-
-  // Calculate balance
-  Future<void> _calculateBalance() async {
-    final incomes = await DBHelper().getAllIncomes();
-    final expenses = await DBHelper().getAllExpenses();
-
-
-    // 2. Calculate balance locally from the combined list
+  // Unified function to fetch data, calculate balance, and update UI
+  void _refreshData() async {
+    // 2. Fetch all transactions using the unified method
+    // (Assuming DatabaseHelper is your unified database class)
+    final transactions = await DatabaseHelper().getAllTransactions();
+    double currentBalance = 0.0;
+    
+    // 3. Calculate balance locally
     for (var t in transactions) {
       if (t.type == TransactionType.income) {
         currentBalance += t.amount;
-      } else {
+      } else { // expense
         currentBalance -= t.amount;
       }
     }
+    
     // The list is already sorted by date DESC in getAllTransactions
-
     if (mounted) {
       setState(() {
-        _balance = totalIncome - totalExpense;
+        // 4. Update the single list and balance
+        _transactionList = Future.value(transactions);
+        _balance = currentBalance;
       });
     }
-  }
-
-  // Refresh data - use setState to trigger rebuild
-  void _refreshData() {
-    setState(() {
-<<<<<<< HEAD
-      _transactionList = Future.value(transactions);
-      _balance = currentBalance;
-=======
-      _incomeList = DBHelper().getAllIncomes();
-      _expenseList = DBHelper().getAllExpenses();
->>>>>>> origin/jovi
-    });
-    _calculateBalance();
   }
 
   @override
@@ -82,46 +66,20 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          // Separator
           Divider(),
 
-          // Single FutureBuilder for ALL transactions
+          // 5. Single FutureBuilder for ALL transactions
           Expanded(
-<<<<<<< HEAD
             child: FutureBuilder<List<Transaction>>(
-              future: _transactionList,
+              future: _transactionList, // Use the single list variable
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                // Check if data is present and the list isn't empty
+                if (!snapshot.hasData || snapshot.data!.isEmpty) { 
                   return Center(child: Text('No transactions yet'));
                 }
-=======
-            child: FutureBuilder<List<Income>>(
-              future: _incomeList,
-              builder: (context, incomeSnapshot) {
-                if (incomeSnapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (!incomeSnapshot.hasData) {
-                  return Center(child: Text('No data available'));
-                }
-                
-                final incomes = incomeSnapshot.data!;
-                
-                return FutureBuilder<List<Expense>>(
-                  future: _expenseList,
-                  builder: (context, expenseSnapshot) {
-                    if (expenseSnapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                    if (!expenseSnapshot.hasData) {
-                      return Center(child: Text('No data available'));
-                    }
-                    
-                    final expenses = expenseSnapshot.data!;
->>>>>>> origin/jovi
 
                 final transactions = snapshot.data!;
 
@@ -153,21 +111,16 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          // Await the navigation result (we expect 'true' if saved successfully)
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => AddTransaction()),
-<<<<<<< HEAD
-          ).then(
-            (_) => _refreshData(),
-          ); // Refresh when returning from AddTransaction
-=======
           );
           
-          // Only refresh if transaction was saved successfully
-          if (result == true) {
+          // Only refresh if the AddTransaction screen returned 'true'
+          if (result == true) { 
             _refreshData();
           }
->>>>>>> origin/jovi
         },
         child: Icon(Icons.add),
       ),
